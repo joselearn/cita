@@ -1,0 +1,53 @@
+name: Verificar citas DEKRA
+
+# Corre cada 10 minutos. Ejecuta el script directamente en el runner y guarda
+# el estado del dedup (.state/) en la cache de Actions, para avisarte solo
+# cuando una fecha ACABA de habilitarse. No necesita Upstash ni Vercel.
+#
+# NOTA: el cron de GitHub Actions no es exacto; puede atrasarse algunos minutos
+# en horas de alta carga. Para precision real existe cron-job.org (ver README).
+on:
+  schedule:
+    - cron: "*/10 * * * *" # cada 10 minutos (UTC)
+  workflow_dispatch: {} # permite ejecutarlo manualmente desde la pestaña Actions
+
+# Evita corridas solapadas que pisarian el archivo de estado.
+concurrency:
+  group: cita-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Recupera el estado del dedup de la corrida anterior y lo vuelve a guardar
+      # al final (la key incluye run_id, asi que siempre guarda una version nueva;
+      # restore-keys recupera la mas reciente).
+      - name: Restaurar estado del dedup
+        uses: actions/cache@v4
+        with:
+          path: .state
+          key: cita-state-${{ github.run_id }}
+          restore-keys: |
+            cita-state-
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar disponibilidad y notificar
+        run: npm run check
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          TARGET_DATES: ${{ vars.TARGET_DATES }}
+          LOCATIONS: ${{ vars.LOCATIONS }}
