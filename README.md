@@ -9,7 +9,7 @@ en varias ubicaciones (por defecto **Alajuela** y **Puntarenas**) y te envia un 
 ## Como funciona
 
 ```
-GitHub Actions (cron cada 10 min)
+GitHub Actions (cron cada 5 min)
         │  ejecuta el script en el runner
         │  + cachea .state/ entre corridas (dedup)
         ▼
@@ -21,11 +21,11 @@ GitHub Actions (cron cada 10 min)
 Resend  ──► un solo correo con las novedades de todas las ubicaciones
 ```
 
-- **GitHub Actions** corre el script cada 10 min y guarda el estado del dedup en su cache.
+- **GitHub Actions** corre el script cada 5 min y guarda el estado del dedup en su cache.
   No necesita Vercel ni Upstash.
 - **Resend** envia el correo (100 correos/dia gratis).
 
-### Deteccion por transicion (clave para correr cada 10 min)
+### Deteccion por transicion (clave para correr cada 5 min)
 
 El sistema solo te avisa cuando una fecha **acaba de habilitarse**. Mientras siga disponible
 no te vuelve a escribir; si se ocupa y luego reaparece, te avisa de nuevo. Ideal para cazar
@@ -51,7 +51,7 @@ lib/run.ts          Orquesta todas las ubicaciones
 scripts/local.ts    Para probar en tu maquina (npm run check)
 api/check.ts        Endpoint serverless de Vercel (opcional, para pruebas manuales)
 scripts/serve.ts    Sirve api/check.ts en local (npm run serve)
-.github/workflows/  Cron cada 10 min de GitHub Actions (ejecutor principal)
+.github/workflows/  Cron cada 5 min de GitHub Actions (ejecutor principal)
 ```
 
 ---
@@ -111,7 +111,7 @@ En tu repo: **Settings -> Secrets and variables -> Actions**.
 
 ## 5. Activar el cron
 
-El workflow corre **cada 10 minutos** automaticamente. Para probarlo ya mismo:
+El workflow corre **cada 5 minutos** automaticamente. Para probarlo ya mismo:
 **Actions -> Verificar citas DEKRA -> Run workflow**.
 
 > En repos nuevos, GitHub a veces deja los workflows programados en pausa hasta que haces

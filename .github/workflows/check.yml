@@ -1,14 +1,14 @@
 name: Verificar citas DEKRA
 
-# Corre cada 10 minutos. Ejecuta el script directamente en el runner y guarda
-# el estado del dedup (.state/) en la cache de Actions, para avisarte solo
-# cuando una fecha ACABA de habilitarse. No necesita Upstash ni Vercel.
+# Corre cada 5 minutos (minimo permitido por GitHub). Ejecuta el script en el
+# runner y guarda el estado del dedup (.state/) en la cache de Actions, para
+# avisarte solo cuando una fecha ACABA de habilitarse. No necesita Upstash ni Vercel.
 #
 # NOTA: el cron de GitHub Actions no es exacto; puede atrasarse algunos minutos
 # en horas de alta carga. Para precision real existe cron-job.org (ver README).
 on:
   schedule:
-    - cron: "*/10 * * * *" # cada 10 minutos (UTC)
+    - cron: "*/5 * * * *" # cada 5 minutos (UTC) - minimo permitido por GitHub
   workflow_dispatch: {} # permite ejecutarlo manualmente desde la pestaña Actions
 
 # Evita corridas solapadas que pisarian el archivo de estado.
