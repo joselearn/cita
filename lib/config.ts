@@ -74,28 +74,52 @@ export function getBookingUrl(locationId: string): string {
   return template.replace("{locationId}", locationId);
 }
 
+function assertDate(d: string): void {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    throw new Error(`Fecha invalida en TARGET_DATES: "${d}". Usa formato YYYY-MM-DD.`);
+  }
+}
+
+/** Expande un rango inclusivo "2026-05-22".."2026-05-30" a todos sus dias. */
+function expandRange(start: string, end: string): string[] {
+  assertDate(start);
+  assertDate(end);
+  const last = new Date(`${end}T00:00:00.000Z`);
+  const cur = new Date(`${start}T00:00:00.000Z`);
+  if (cur > last) {
+    throw new Error(`Rango invalido en TARGET_DATES: "${start}..${end}" (inicio despues del fin).`);
+  }
+  const dates: string[] = [];
+  while (cur <= last) {
+    dates.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return dates;
+}
+
 /**
- * Fechas que te interesan, en formato YYYY-MM-DD separadas por coma.
- * Ej: TARGET_DATES="2026-06-15,2026-06-16,2026-06-17"
+ * Fechas que te interesan, separadas por coma. Cada elemento puede ser:
+ *   - una fecha:  2026-06-15
+ *   - un rango:   2026-05-22..2026-05-30  (ambos extremos incluidos)
+ * Ej: TARGET_DATES="2026-05-22..2026-05-30,2026-06-15"
  *
- * Es OPCIONAL: si no se define, el sistema avisa de la cita mas proxima
- * disponible dentro de la ventana de busqueda.
+ * Es OPCIONAL: si no se define, el sistema avisa de la cita mas proxima.
  */
 export function getTargetDates(): string[] {
   const raw = process.env.TARGET_DATES?.trim();
   if (!raw) return [];
 
-  const dates = raw
-    .split(",")
-    .map((d) => d.trim())
-    .filter(Boolean);
-
-  for (const d of dates) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      throw new Error(`Fecha invalida en TARGET_DATES: "${d}". Usa formato YYYY-MM-DD.`);
+  const dates = new Set<string>();
+  for (const token of raw.split(",").map((t) => t.trim()).filter(Boolean)) {
+    if (token.includes("..")) {
+      const [start, end] = token.split("..").map((s) => s.trim());
+      for (const d of expandRange(start, end)) dates.add(d);
+    } else {
+      assertDate(token);
+      dates.add(token);
     }
   }
-  return dates;
+  return [...dates].sort();
 }
 
 export function getEmailConfig() {

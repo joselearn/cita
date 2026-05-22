@@ -102,9 +102,12 @@ En tu repo: **Settings -> Secrets and variables -> Actions**.
 
 | Variable | Valor | Default si la omites |
 |---|---|---|
-| `TARGET_DATES` | `2026-05-22` o `2026-06-15,2026-06-16` | vacio = cita mas proxima |
+| `TARGET_DATES` | `2026-05-22..2026-05-30` (rango) o `2026-06-15,2026-06-16` (sueltas) | vacio = cita mas proxima |
 | `EMAIL_FROM` | `DEKRA Watcher <onboarding@resend.dev>` | ese mismo |
 | `LOCATIONS` | `Alajuela:4e130e21-...,Puntarenas:94801ed6-...` | Alajuela y Puntarenas |
+
+> `TARGET_DATES` acepta fechas sueltas y rangos con `..` (ambos extremos incluidos),
+> combinables: `2026-05-22..2026-05-30,2026-06-15`.
 
 ## 5. Activar el cron
 
