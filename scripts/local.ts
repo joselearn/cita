@@ -14,11 +14,14 @@ run()
     for (const loc of result.locations) {
       const detalle =
         result.mode === "target-dates"
-          ? `objetivo disponibles: [${loc.availableTargetDates.join(", ") || "-"}]`
-          : `cita mas proxima: ${loc.earliestAvailable ?? "-"}`;
+          ? `con cupos: [${loc.availableTargetDates.join(", ") || "-"}]`
+          : `cita mas proxima con cupos: ${loc.earliestAvailable ?? "-"}`;
+      const nuevo = loc.newlyNotified
+        .map((n) => `${n.date} (${n.times.length} cupos)`)
+        .join(", ");
       console.log(
-        `  ${loc.name}: ${loc.totalAvailableDays} dias disponibles | ${detalle}` +
-          (loc.newlyNotified.length ? `  -> NUEVO: ${loc.newlyNotified.join(", ")}` : ""),
+        `  ${loc.name}: ${loc.totalAvailableDays} dias (nivel dia) | ${detalle}` +
+          (nuevo ? `  -> NUEVO: ${nuevo}` : ""),
       );
     }
     console.log(result.emailSent ? "\nCorreo enviado." : "\nSin novedades: no se envio correo.");

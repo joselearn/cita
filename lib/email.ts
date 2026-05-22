@@ -1,10 +1,28 @@
 import { Resend } from "resend";
 import { getEmailConfig, getBookingUrl } from "./config.js";
 
+export interface DateSlots {
+  date: string;
+  /** Horas disponibles en formato ISO (UTC). Vacio si no se pudieron consultar. */
+  times: string[];
+}
+
 export interface LocationNotification {
   locationName: string;
   locationId: string;
-  dates: string[];
+  dates: DateSlots[];
+}
+
+const TIME_ZONE = process.env.TIME_ZONE?.trim() || "America/Costa_Rica";
+
+/** Formatea una hora ISO (UTC) a la hora local de Costa Rica, ej. "9:35 a. m.". */
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("es-CR", {
+    timeZone: TIME_ZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 /** Envia un unico correo con las novedades de todas las ubicaciones. */
@@ -22,7 +40,7 @@ export async function sendAvailabilityEmail(
 
   // Para el asunto: "Alajuela (2026-05-22), Puntarenas (2026-06-01)"
   const summary = notifications
-    .map((n) => `${n.locationName} (${n.dates.join(", ")})`)
+    .map((n) => `${n.locationName} (${n.dates.map((d) => d.date).join(", ")})`)
     .join(", ");
   const subject = `Cita DEKRA disponible: ${summary}`;
 
@@ -30,10 +48,14 @@ export async function sendAvailabilityEmail(
     .map((n) => {
       const bookingUrl = getBookingUrl(n.locationId);
       const list = n.dates
-        .map(
-          (d) =>
-            `<li><a href="${bookingUrl}" style="color:#0a7d2c;font-weight:bold;">${d}</a></li>`,
-        )
+        .map((d) => {
+          const times = d.times.length
+            ? `<span style="color:#444;"> — ${d.times.length} cupo(s): ${d.times
+                .map(formatTime)
+                .join(", ")}</span>`
+            : "";
+          return `<li><a href="${bookingUrl}" style="color:#0a7d2c;font-weight:bold;">${d.date}</a>${times}</li>`;
+        })
         .join("");
       return `
         <div style="margin:0 0 18px 0;">

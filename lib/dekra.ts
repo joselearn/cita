@@ -82,3 +82,61 @@ export async function fetchAvailableDays(locationId: string): Promise<AvailableD
 export function toDateKey(isoDate: string): string {
   return isoDate.slice(0, 10);
 }
+
+const TIME_SLOTS_URL =
+  process.env.DEKRA_TIMESLOTS_URL?.trim() ||
+  "https://booking.dekra.com/api/v1/booking/retail/filter-time-slots";
+
+interface TimeSlotResponse {
+  time: string;
+}
+
+/** Suma un dia a una clave YYYY-MM-DD. */
+function nextDayKey(dateKey: string): string {
+  const d = new Date(`${dateKey}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Consulta los horarios disponibles de un dia concreto en una ubicacion.
+ * Devuelve las horas en formato ISO (UTC).
+ */
+export async function fetchTimeSlots(locationId: string, dateKey: string): Promise<string[]> {
+  const body = {
+    isRetail: true,
+    tenantId: dekraConfig.tenantId,
+    locationId,
+    productIds: [dekraConfig.productId],
+    startDate: `${dateKey}T06:00:00.000Z`,
+    endDate: `${nextDayKey(dateKey)}T05:59:59.999Z`,
+    selectedTimeslots: [],
+  };
+
+  const headers: Record<string, string> = {
+    accept: "application/json, text/plain, */*",
+    "content-type": "application/json",
+    origin: "https://booking.dekra.com",
+    referer: getBookingUrl(locationId),
+    "user-agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+  };
+  if (dekraConfig.cookie) {
+    headers.cookie = dekraConfig.cookie;
+  }
+
+  const res = await fetch(TIME_SLOTS_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`DEKRA time-slots respondio ${res.status}. ${text.slice(0, 200)}`);
+  }
+
+  const data = (await res.json()) as TimeSlotResponse[];
+  if (!Array.isArray(data)) return [];
+  return data.map((s) => s.time);
+}
