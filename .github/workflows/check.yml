@@ -46,8 +46,19 @@ jobs:
       - name: Verificar disponibilidad y notificar
         run: npm run check
         env:
+          # Telegram (gratis) - opcional si usas correo
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Correo (Resend) - opcional si usas Telegram
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          # Canales: telegram, email o email,telegram (vacio = se detecta por los secretos presentes)
+          NOTIFY_CHANNELS: ${{ vars.NOTIFY_CHANNELS }}
+          # Si tambien corres el endpoint en Vercel, pon aqui los mismos datos de Upstash
+          # para que ambos compartan el estado y no te avisen dos veces.
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           TARGET_DATES: ${{ vars.TARGET_DATES }}
+          WINDOW_DAYS: ${{ vars.WINDOW_DAYS }}
           LOCATIONS: ${{ vars.LOCATIONS }}

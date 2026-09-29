@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { getEmailConfig, getBookingUrl } from "./config.js";
+import { getEmailConfig, getBookingUrl, introForMode, type NotifyMode } from "./config.js";
 
 export interface DateSlots {
   date: string;
@@ -13,30 +13,17 @@ export interface LocationNotification {
   dates: DateSlots[];
 }
 
-const TIME_ZONE = process.env.TIME_ZONE?.trim() || "America/Costa_Rica";
-
-/** Formatea una hora ISO (UTC) a la hora local de Costa Rica, ej. "9:35 a. m.". */
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("es-CR", {
-    timeZone: TIME_ZONE,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
+import { formatTime } from "./time.js";
 
 /** Envia un unico correo con las novedades de todas las ubicaciones. */
 export async function sendAvailabilityEmail(
   notifications: LocationNotification[],
-  mode: "target-dates" | "earliest" = "target-dates",
+  mode: NotifyMode = "target-dates",
 ): Promise<void> {
   const emailConfig = getEmailConfig();
   const resend = new Resend(emailConfig.apiKey);
 
-  const isEarliest = mode === "earliest";
-  const intro = isEarliest
-    ? "Estas son las citas mas proximas que acaban de habilitarse:"
-    : "Se habilito disponibilidad en las fechas que te interesan:";
+  const intro = introForMode(mode);
 
   // Para el asunto: "Alajuela (2026-05-22), Puntarenas (2026-06-01)"
   const summary = notifications

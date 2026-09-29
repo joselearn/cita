@@ -6,6 +6,10 @@
   "type": "module",
   "scripts": {
     "check": "tsx scripts/local.ts",
+    "telegram:chatid": "tsx scripts/telegram-chat-id.ts",
+    "telegram:webhook": "tsx scripts/telegram-webhook.ts",
+    "bot": "tsx scripts/bot-local.ts",
+    "bot:poll": "tsx scripts/bot-poll.ts",
     "serve": "tsx scripts/serve.ts",
     "typecheck": "tsc --noEmit"
   },
