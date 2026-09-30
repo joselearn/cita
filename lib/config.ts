@@ -92,6 +92,20 @@ export function getBookingUrl(locationId: string): string {
   return template.replace("{locationId}", locationId);
 }
 
+/**
+ * Link rapido: el mismo link de la estacion mas la fecha y hora locales en el
+ * fragmento (#cita=YYYY-MM-DDTHH:MM). DEKRA lo ignora; el script del navegador lo lee.
+ */
+export function getQuickBookingUrl(locationId: string, dateKey: string, timeHHMM: string): string {
+  return `${getBookingUrl(locationId)}#cita=${dateKey}T${timeHHMM}`;
+}
+
+/** URL publica del script "DEKRA rapido" (se sirve desde /public en Vercel). */
+export function getUserscriptUrl(): string {
+  const base = process.env.PUBLIC_BASE_URL?.trim() || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+  return `${base.replace(/\/+$/, "")}/dekra-rapido.user.js`;
+}
+
 function assertDate(d: string): void {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     throw new Error(`Fecha invalida en TARGET_DATES: "${d}". Usa formato YYYY-MM-DD.`);

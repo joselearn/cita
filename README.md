@@ -25,10 +25,32 @@ Cada aviso de cita trae un boton **Reservar** por estacion y otro **"Ya reserve,
 | `/silencio 22-6` | no avisa en ese rango; lo acumulado llega al terminar (`/silencio no`) |
 | `/ubicaciones` | botones de estaciones |
 | `/horas` | a que horas y dias suelen aparecer cupos, y cuanto duran (ultimos 30 dias; `/horas 7` para una semana) |
+| `/rapido on` | links rapidos: un boton por horario que, con el script "DEKRA rapido" instalado, elige dia y hora y rellena el formulario (`/rapido` explica; `/rapido off` vuelve al boton por estacion) |
 | `/ayuda` | lista de comandos |
 
 Solo obedece a los chats de `TELEGRAM_CHAT_ID`. Los cambios aplican en la siguiente corrida (1 minuto).
 Arranca **en pausa**: no consulta nada hasta que elijas estaciones y pulses Empezar.
+
+### Links rapidos y el script "DEKRA rapido" (opcional)
+
+DEKRA no permite abrir la pagina en una fecha y hora concretas: su formulario no tiene URL y el
+cupo se aparta con un clic dentro de la pagina. Lo mas rapido posible es que **tu propio navegador**
+haga esos clics. Para eso existe `public/dekra-rapido.user.js`, un userscript que:
+
+1. Lee la fecha y hora que el bot pone al final del link (`#cita=2026-10-12T06:35`).
+2. Elige el tipo de vehiculo, el dia y la hora en la pagina de DEKRA.
+3. Rellena placa, nombre, apellido, correo y telefono con datos que guardas **solo en tu dispositivo**
+   (te los pide la primera vez).
+4. Se detiene ahi: el captcha y la confirmacion son tuyos.
+
+Se activa con `/rapido on` (los avisos pasan a traer un boton por horario) y se instala una vez:
+en iPhone con la app **Userscripts** (Ajustes → Safari → Extensiones), en Android con **Firefox +
+Tampermonkey**, en computadora con **Tampermonkey**. Telegram debe abrir los links en Safari/Firefox,
+no en su navegador interno. `/rapido` muestra los pasos y la URL del script, que se sirve desde
+`https://TU-APP.vercel.app/dekra-rapido.user.js` (`PUBLIC_BASE_URL`).
+
+Si DEKRA cambia su pagina, el script puede dejar de acertar los botones; nada se rompe, solo
+vuelves a hacer los clics a mano.
 
 ### Lo que hace solo
 
@@ -217,6 +239,7 @@ npm run bot:poll -- 60       # responde comandos y botones, y revisa citas cada 
    | `UPSTASH_REDIS_REST_TOKEN` | de Upstash |
    | `CRON_SECRET` | un texto largo inventado, ej. 40 letras y numeros al azar |
    | `WINDOW_DAYS` | `3` (o los dias que te sirvan) |
+   | `PUBLIC_BASE_URL` | `https://TU-APP.vercel.app` (para el link del script en `/rapido`) |
 
    Opcionales: `TARGET_DATES`, `LOCATIONS`, `RESEND_API_KEY`, `EMAIL_TO`, `EMAIL_FROM`.
 4. **Deployments -> ... -> Redeploy** para que tome las variables.

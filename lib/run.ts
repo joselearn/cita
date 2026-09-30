@@ -315,7 +315,7 @@ export async function run(): Promise<RunResult> {
 
     let notifiedVia: NotifyChannel[] = [];
     if (notifications.length > 0) {
-      const sent = await notify(notifications, mode);
+      const sent = await notify(notifications, mode, { quickLinks: control.quickLinks });
       notifiedVia = sent.sentVia;
       if (sent.telegramMessages.length > 0) {
         state.messages.push(...sent.telegramMessages);

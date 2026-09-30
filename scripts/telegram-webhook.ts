@@ -63,6 +63,7 @@ if (arg === "--info") {
       { command: "silencio", description: "No avisar de noche, ej: /silencio 22-6" },
       { command: "ubicaciones", description: "Estaciones disponibles" },
       { command: "horas", description: "A que horas suelen aparecer cupos" },
+      { command: "rapido", description: "Links rapidos + script que rellena el formulario" },
       { command: "ayuda", description: "Lista de comandos" },
     ],
   });

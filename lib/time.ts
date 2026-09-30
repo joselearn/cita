@@ -47,6 +47,34 @@ export function formatTime(iso: string): string {
   });
 }
 
+/** Hora local corta para botones, ej. "6:35am". */
+export function formatTimeShort(iso: string): string {
+  return new Date(iso)
+    .toLocaleTimeString("en-US", { timeZone: TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true })
+    .replace(" ", "")
+    .toLowerCase();
+}
+
+/** Fecha (YYYY-MM-DD) y hora (HH:MM, 24 h) locales de un instante ISO. */
+export function localDateTimeParts(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+  return { date: todayKey(d), time: time.replace(/^24/, "00") };
+}
+
+/** Fecha corta para botones, ej. "12 oct". */
+export function formatDateShort(dateKey: string): string {
+  const d = new Date(`${dateKey}T12:00:00Z`);
+  return new Intl.DateTimeFormat("es-CR", { timeZone: "UTC", day: "numeric", month: "short" })
+    .format(d)
+    .replace(".", "");
+}
+
 /** Formatea fecha y hora local corta, ej. "29/09, 10:11 a. m.". */
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("es-CR", {

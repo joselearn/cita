@@ -106,7 +106,10 @@ export function menuKeyboard(control: Control): InlineKeyboard {
           ? { text: "⏸ Parar busqueda", callback_data: "stop" }
           : { text: "▶️ Empezar a buscar", callback_data: "menu:go" },
       ],
-      [{ text: "ℹ️ Estado", callback_data: "menu:estado" }],
+      [
+        { text: "ℹ️ Estado", callback_data: "menu:estado" },
+        { text: control.quickLinks ? "⚡ Links rapidos: ON" : "⚡ Links rapidos: OFF", callback_data: "rapido:toggle" },
+      ],
     ],
   };
 }

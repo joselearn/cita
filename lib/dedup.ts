@@ -24,6 +24,8 @@ export interface SentMessage {
   notifications: LocationNotification[];
   /** Claves "locationId|fecha" que ya se ocuparon (se muestran tachadas). */
   taken: string[];
+  /** Si se envio con botones por horario (links rapidos). */
+  quickLinks?: boolean;
   sentAt: string;
 }
 

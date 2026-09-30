@@ -14,7 +14,11 @@ export interface NotifyResult {
  * Si un canal falla, igual se intentan los demas y al final se lanza un error
  * con el detalle de los que fallaron.
  */
-export async function notify(notifications: LocationNotification[], mode: NotifyMode): Promise<NotifyResult> {
+export async function notify(
+  notifications: LocationNotification[],
+  mode: NotifyMode,
+  options: { quickLinks?: boolean } = {},
+): Promise<NotifyResult> {
   const channels = getNotifyChannels();
   const result: NotifyResult = { sentVia: [], telegramMessages: [] };
   const errors: string[] = [];
@@ -24,7 +28,7 @@ export async function notify(notifications: LocationNotification[], mode: Notify
       if (channel === "email") {
         await sendAvailabilityEmail(notifications, mode);
       } else {
-        result.telegramMessages.push(...(await sendAvailabilityTelegram(notifications, mode)));
+        result.telegramMessages.push(...(await sendAvailabilityTelegram(notifications, mode, options.quickLinks ?? false)));
       }
       result.sentVia.push(channel);
     } catch (err) {

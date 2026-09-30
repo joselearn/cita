@@ -17,6 +17,11 @@ export interface Control {
   hours: HourRange | null;
   /** Horas de silencio: no manda avisos en ese rango, los acumula. null = nunca. */
   quiet: HourRange | null;
+  /**
+   * Links rapidos: un boton por horario que lleva fecha y hora en el link, para que
+   * el script "DEKRA rapido" del navegador haga los clics y rellene el formulario.
+   */
+  quickLinks: boolean;
   /** Cuando expira sola la busqueda (ISO). null = sin expiracion. */
   expiresAt: string | null;
   /** Ya se aviso que expira pronto. */
@@ -44,6 +49,7 @@ export function defaultControl(): Control {
     windowDays: getWindowDays(),
     hours: null,
     quiet: null,
+    quickLinks: false,
     expiresAt: null,
     expiryWarned: false,
     updatedAt: new Date(0).toISOString(),

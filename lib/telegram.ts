@@ -1,6 +1,6 @@
-import { getTelegramConfig, getBookingUrl, introForMode, type NotifyMode } from "./config.js";
+import { getTelegramConfig, getBookingUrl, getQuickBookingUrl, introForMode, type NotifyMode } from "./config.js";
 import type { LocationNotification } from "./email.js";
-import { formatTime } from "./time.js";
+import { formatTime, formatTimeShort, formatDateShort, localDateTimeParts } from "./time.js";
 import { notificationExtraRow, type InlineKeyboard, type Button } from "./keyboards.js";
 import type { SentMessage } from "./dedup.js";
 
@@ -124,10 +124,41 @@ function header(mode: NotifyMode): string {
   return `🚗 <b>Hay citas disponibles en DEKRA</b>\n${introForMode(mode)}\n`;
 }
 
-function buttonsFor(notifications: LocationNotification[], taken: Set<string>): InlineKeyboard {
-  const rows: Button[][] = notifications
-    .filter((n) => n.dates.some((d) => !taken.has(takenKey(n.locationId, d.date))))
-    .map((n) => [{ text: `📅 Reservar en ${n.locationName}`, url: getBookingUrl(n.locationId) }]);
+/** Cuantos botones de horario por fecha en modo "links rapidos". */
+const QUICK_LINK_MAX_TIMES = Number(process.env.QUICK_LINK_MAX_TIMES) || 4;
+
+/**
+ * Botones del aviso.
+ * - Normal: un boton "Reservar en X" por estacion.
+ * - Links rapidos: ademas, un boton por horario (hasta QUICK_LINK_MAX_TIMES por fecha)
+ *   cuyo link lleva fecha y hora para el script "DEKRA rapido".
+ */
+function buttonsFor(notifications: LocationNotification[], taken: Set<string>, quickLinks: boolean): InlineKeyboard {
+  const rows: Button[][] = [];
+  for (const n of notifications) {
+    const liveDates = n.dates.filter((d) => !taken.has(takenKey(n.locationId, d.date)));
+    if (liveDates.length === 0) continue;
+    if (quickLinks) {
+      // En modo rapido cada mensaje trae UNA estacion (ver buildTelegramChunks), asi que el
+      // boton no repite el nombre: solo hora (un dia) o fecha + hora (varios dias). Textos
+      // cortos para que Telegram no los recorte en el celular.
+      const singleDay = liveDates.length === 1;
+      const perRow = singleDay ? 3 : 2;
+      for (const d of liveDates) {
+        const buttons: Button[] = d.times.slice(0, QUICK_LINK_MAX_TIMES).map((t) => {
+          const { date, time } = localDateTimeParts(t);
+          return {
+            text: singleDay ? `⚡ ${formatTimeShort(t)}` : `⚡ ${formatDateShort(d.date)} ${formatTimeShort(t)}`,
+            url: getQuickBookingUrl(n.locationId, date, time),
+          };
+        });
+        for (let i = 0; i < buttons.length; i += perRow) rows.push(buttons.slice(i, i + perRow));
+      }
+      rows.push([{ text: `📅 Otra hora en ${n.locationName}`, url: getBookingUrl(n.locationId) }]);
+    } else {
+      rows.push([{ text: `📅 Reservar en ${n.locationName}`, url: getBookingUrl(n.locationId) }]);
+    }
+  }
   rows.push(notificationExtraRow());
   return { inline_keyboard: rows };
 }
@@ -157,6 +188,7 @@ export function buildTelegramChunks(
   notifications: LocationNotification[],
   mode: NotifyMode = "target-dates",
   taken: Set<string> = new Set(),
+  quickLinks = false,
 ): TelegramChunk[] {
   const chunks: TelegramChunk[] = [];
   let text = header(mode);
@@ -164,7 +196,7 @@ export function buildTelegramChunks(
 
   const flush = () => {
     if (group.length === 0) return;
-    chunks.push({ text, replyMarkup: buttonsFor(group, taken), notifications: group });
+    chunks.push({ text, replyMarkup: buttonsFor(group, taken, quickLinks), notifications: group });
     text = `${header(mode)}(continuacion)\n`;
     group = [];
   };
@@ -178,6 +210,8 @@ export function buildTelegramChunks(
     if (text.length + block.length + 1 > MAX_MESSAGE_CHARS) flush();
     text += `\n${block}\n`;
     group.push(n);
+    // Links rapidos: un mensaje por estacion, para que los botones de hora no tengan que repetir el nombre.
+    if (quickLinks) flush();
   }
   flush();
   return chunks;
@@ -190,9 +224,10 @@ export function buildTelegramChunks(
 export async function sendAvailabilityTelegram(
   notifications: LocationNotification[],
   mode: NotifyMode = "target-dates",
+  quickLinks = false,
 ): Promise<SentMessage[]> {
   const cfg = getTelegramConfig();
-  const chunks = buildTelegramChunks(notifications, mode);
+  const chunks = buildTelegramChunks(notifications, mode, new Set(), quickLinks);
   const sent: SentMessage[] = [];
 
   const results = await Promise.allSettled(
@@ -206,6 +241,7 @@ export async function sendAvailabilityTelegram(
           mode,
           notifications: c.notifications,
           taken: [],
+          quickLinks,
           sentAt: new Date().toISOString(),
         });
       }
@@ -226,5 +262,5 @@ export async function sendAvailabilityTelegram(
 export async function updateSentMessage(msg: SentMessage): Promise<void> {
   const taken = new Set(msg.taken);
   const text = buildTelegramText(msg.notifications, msg.mode, taken);
-  await editTelegramMessage(msg.chatId, msg.messageId, text, buttonsFor(msg.notifications, taken));
+  await editTelegramMessage(msg.chatId, msg.messageId, text, buttonsFor(msg.notifications, taken, msg.quickLinks ?? false));
 }

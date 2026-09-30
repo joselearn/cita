@@ -1,4 +1,4 @@
-import { getLocations } from "./config.js";
+import { getLocations, getUserscriptUrl } from "./config.js";
 import {
   loadControl,
   saveControl,
@@ -54,6 +54,7 @@ export const HELP_TEXT = [
   "/silencio 22-6 — no avisar de noche, lo manda en la mañana (/silencio no)",
   "/ubicaciones — lista las estaciones disponibles",
   "/horas — a que horas suelen aparecer cupos (ultimos 30 dias)",
+  "/rapido — links rapidos: un boton por horario + script que rellena el formulario",
   "/ayuda — este mensaje",
   "",
   "Los nombres pueden ir sin tildes y a medias: /buscar perez, guapiles",
@@ -71,6 +72,7 @@ function describe(control: Control): string {
   ];
   if (control.hours) lines.push(`Horario: solo cupos de ${formatHourRange(control.hours)}`);
   if (control.quiet) lines.push(`Silencio: de ${formatHourRange(control.quiet)} (te aviso despues)`);
+  if (control.quickLinks) lines.push("Links rapidos: activados (un boton por horario)");
   if (control.active && control.expiresAt) {
     lines.push(`Se apaga sola: ${formatDateTime(control.expiresAt)} (manda /buscar para renovar)`);
   }
@@ -156,6 +158,38 @@ async function statusReply(control: Control): Promise<BotReply> {
   }
   if (state.pending.length > 0) lines.push(`🔕 ${state.pending.length} aviso(s) esperando a que termine el silencio.`);
   return { text: lines.join("\n") };
+}
+
+/** Explicacion de los links rapidos y como instalar el script. */
+function quickLinksHelp(control: Control): string {
+  const url = getUserscriptUrl();
+  return [
+    control.quickLinks ? "⚡ <b>Links rapidos: activados.</b>" : "⚡ <b>Links rapidos: desactivados.</b>",
+    "",
+    "Con esto, cada aviso trae un boton por horario. Al tocarlo se abre DEKRA y el script " +
+      "<b>DEKRA rapido</b> elige el dia y la hora y rellena tus datos; tu solo resuelves el captcha y confirmas.",
+    "",
+    "<b>Para que funcione en tu iPhone</b> (una sola vez):",
+    "1. Telegram: Ajustes → Datos y almacenamiento → Navegador → Safari.",
+    "2. iPhone: Ajustes → Safari → Extensiones → Userscripts → activar y permitir en todos los sitios.",
+    "3. App Userscripts: elige una carpeta (Set Userscripts Directory).",
+    url ? `4. Abre en Safari: ${url}\n   Toca el icono de extensiones → Userscripts → Install.` : "4. Instala el script DEKRA rapido (URL pendiente de despliegue).",
+    "5. La primera vez que abras DEKRA te pide placa, nombre, apellido, correo y telefono. Se guardan solo en tu telefono.",
+    "",
+    "Sin el script los botones siguen sirviendo: abren la estacion como siempre.",
+    "",
+    control.quickLinks ? "Desactivar: /rapido off" : "Activar: /rapido on",
+  ].join("\n");
+}
+
+async function setQuickLinks(control: Control, on: boolean): Promise<BotReply> {
+  control.quickLinks = on;
+  await saveControl(control);
+  return {
+    text: on
+      ? "⚡ <b>Links rapidos activados.</b> Los proximos avisos traeran un boton por horario.\n\n¿Ya instalaste el script? Si no, manda /rapido para ver los pasos."
+      : "Links rapidos desactivados. Los avisos vuelven a traer un boton por estacion.",
+  };
 }
 
 /** Separa "/buscar Alajuela, Heredia" en comando y argumento. */
@@ -290,6 +324,13 @@ export async function handleCommand(text: string): Promise<BotReply> {
     case "estaciones":
       return { text: stationsText(control), replyMarkup: stationsKeyboard(control) };
 
+    case "rapido":
+    case "links": {
+      if (/^(on|si|sí|activar|1)$/i.test(arg)) return setQuickLinks(control, true);
+      if (/^(off|no|desactivar|0)$/i.test(arg)) return setQuickLinks(control, false);
+      return { text: quickLinksHelp(control) };
+    }
+
     case "horas":
     case "patron":
     case "estadisticas": {
@@ -376,6 +417,15 @@ export async function handleCallback(data: string): Promise<CallbackResult> {
     case "stop": {
       const reply = await stopSearch(control);
       return { toast: "Busqueda en pausa.", send: reply };
+    }
+
+    case "rapido": {
+      const reply = await setQuickLinks(control, !control.quickLinks);
+      return {
+        toast: control.quickLinks ? "Links rapidos activados." : "Links rapidos desactivados.",
+        edit: { text: "¿Que quieres hacer?", replyMarkup: menuKeyboard(control) },
+        send: control.quickLinks ? { text: quickLinksHelp(control) } : reply,
+      };
     }
 
     default:
