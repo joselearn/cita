@@ -12,6 +12,7 @@ import {
   type Control,
 } from "./control.js";
 import { loadState } from "./dedup.js";
+import { loadEvents, computeStats, formatStats } from "./events.js";
 import { formatDateTime, formatHourRange, parseHourRange } from "./time.js";
 import {
   stationsKeyboard,
@@ -52,6 +53,7 @@ export const HELP_TEXT = [
   "/horario 6-10 — solo cupos entre esas horas (/horario todo = cualquiera)",
   "/silencio 22-6 — no avisar de noche, lo manda en la mañana (/silencio no)",
   "/ubicaciones — lista las estaciones disponibles",
+  "/horas — a que horas suelen aparecer cupos (ultimos 30 dias)",
   "/ayuda — este mensaje",
   "",
   "Los nombres pueden ir sin tildes y a medias: /buscar perez, guapiles",
@@ -287,6 +289,14 @@ export async function handleCommand(text: string): Promise<BotReply> {
     case "lugares":
     case "estaciones":
       return { text: stationsText(control), replyMarkup: stationsKeyboard(control) };
+
+    case "horas":
+    case "patron":
+    case "estadisticas": {
+      const days = /^\d{1,3}$/.test(arg) ? Math.min(Number(arg), 365) : 30;
+      const stats = computeStats(await loadEvents(), days);
+      return { text: formatStats(stats, days) };
+    }
 
     default: {
       // Solo un numero: es la ventana de dias. Si estaba eligiendo, arranca; si ya

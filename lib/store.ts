@@ -51,6 +51,32 @@ export async function setJson<T>(key: string, value: T): Promise<void> {
 }
 
 /**
+ * Agrega elementos al final de una lista y la recorta a los ultimos `cap`.
+ * En Upstash son 2 comandos (RPUSH + LTRIM); en archivo, lee/escribe el JSON.
+ */
+export async function appendList<T>(key: string, items: T[], cap: number): Promise<void> {
+  if (items.length === 0) return;
+  if (redis) {
+    const k = redisKey(key);
+    await redis.rpush(k, ...items.map((i) => JSON.stringify(i)));
+    await redis.ltrim(k, -cap, -1);
+    return;
+  }
+  const current = (await getJson<T[]>(key)) ?? [];
+  await setJson(key, [...current, ...items].slice(-cap));
+}
+
+/** Devuelve los ultimos `count` elementos de una lista (o todos si se omite). */
+export async function readList<T>(key: string, count?: number): Promise<T[]> {
+  if (redis) {
+    const raw = await redis.lrange<string | T>(redisKey(key), count ? -count : 0, -1);
+    return raw.map((r) => (typeof r === "string" ? (JSON.parse(r) as T) : r));
+  }
+  const all = (await getJson<T[]>(key)) ?? [];
+  return count ? all.slice(-count) : all;
+}
+
+/**
  * Candado con expiracion. Devuelve true si se obtuvo.
  * Solo aplica con Upstash; en local o GitHub Actions no hace falta.
  */

@@ -3,6 +3,7 @@ import type { State } from "./dedup.js";
 import { broadcast } from "./telegram.js";
 import { getNotifyChannels } from "./config.js";
 import { todayKey, localHourMinute, formatDateTime, dateInRange } from "./time.js";
+import { loadEvents, computeStats, yesterdayLine } from "./events.js";
 
 /**
  * Avisos "de sistema" del bot: fallos, latido diario y expiracion de la busqueda.
@@ -69,7 +70,13 @@ export async function maybeHeartbeat(state: State, control: Control, summary: st
   if (state.lastHeartbeatDate === today) return;
   if (localHourMinute(now).hour < HEARTBEAT_HOUR) return;
   state.lastHeartbeatDate = today;
-  await notifySystem(`☀️ Sigo buscando. ${summary}\nManda /parar si ya no lo necesitas.`);
+  let ayer = "";
+  try {
+    ayer = `\n${yesterdayLine(computeStats(await loadEvents(), 2, now))}`;
+  } catch {
+    // Si falla el historial, el latido sale igual.
+  }
+  await notifySystem(`☀️ Sigo buscando. ${summary}${ayer}\nManda /parar si ya no lo necesitas.`);
 }
 
 /**

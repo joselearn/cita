@@ -62,6 +62,7 @@ if (arg === "--info") {
       { command: "horario", description: "Solo cupos entre horas, ej: /horario 6-10" },
       { command: "silencio", description: "No avisar de noche, ej: /silencio 22-6" },
       { command: "ubicaciones", description: "Estaciones disponibles" },
+      { command: "horas", description: "A que horas suelen aparecer cupos" },
       { command: "ayuda", description: "Lista de comandos" },
     ],
   });

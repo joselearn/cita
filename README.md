@@ -24,6 +24,7 @@ Cada aviso de cita trae un boton **Reservar** por estacion y otro **"Ya reserve,
 | `/horario 6-10` | solo avisa de cupos entre esas horas (`/horario todo` lo quita) |
 | `/silencio 22-6` | no avisa en ese rango; lo acumulado llega al terminar (`/silencio no`) |
 | `/ubicaciones` | botones de estaciones |
+| `/horas` | a que horas y dias suelen aparecer cupos, y cuanto duran (ultimos 30 dias; `/horas 7` para una semana) |
 | `/ayuda` | lista de comandos |
 
 Solo obedece a los chats de `TELEGRAM_CHAT_ID`. Los cambios aplican en la siguiente corrida (1 minuto).
@@ -38,6 +39,11 @@ Arranca **en pausa**: no consulta nada hasta que elijas estaciones y pulses Empe
   y otra vez cuando vuelve. Mientras tanto reintenta con espera creciente ante 429 y 5xx.
 - **Tacha los cupos que se ocuparon**: si un cupo que te aviso ya no esta en la siguiente revision,
   edita el mensaje original y lo marca "ya se ocupo", para que no corras a reservar algo que no existe.
+- **Registra el historial de novedades**: cada aparicion y desaparicion de cupos queda anotada
+  (hora, estacion, fecha, cuantos horarios). `/horas` lo resume por hora del dia, dia de la semana
+  y duracion de los cupos sueltos, para saber cuando conviene estar pendiente del celular. El latido
+  diario incluye lo de ayer. Se guardan los ultimos 2.000 eventos (`MAX_EVENTS`) en una lista aparte
+  de Upstash que solo se escribe cuando hay novedades.
 
 Estaciones disponibles: Alajuela, Alajuelita, Cañas, Cartago, Guápiles, Heredia, Liberia, Limón,
 Nicoya, Pérez Zeledón, Puntarenas, San Carlos, Santo Domingo, Móvil Guatuso, Móvil San Marcos
@@ -112,6 +118,7 @@ lib/keyboards.ts    Botones de Telegram (estaciones, dias, menu)
 lib/commands.ts     Interpreta comandos y botones del bot
 lib/bot.ts          Procesa una actualizacion de Telegram (lo usan webhook y polling)
 lib/alerts.ts       Avisos de sistema: fallos, latido diario, expiracion
+lib/events.ts       Historial de novedades y resumen de /horas
 lib/telegram.ts     Envia y edita mensajes por Telegram (Bot API)
 lib/email.ts        Envia el correo con Resend
 lib/notify.ts       Envia por todos los canales configurados

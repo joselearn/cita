@@ -66,10 +66,25 @@ export async function saveState(state: State): Promise<void> {
  * Llama a saveState() al terminar la corrida para persistirlo.
  */
 export function takeNewlyAvailable(state: State, scope: string, availableNow: string[]): string[] {
-  const prev = new Set(state.available[scope] ?? []);
+  return diffAvailable(state, scope, availableNow).newly;
+}
+
+/**
+ * Como takeNewlyAvailable, pero devuelve tambien las fechas que dejaron de
+ * tener cupos ("gone"), para el historial de eventos.
+ */
+export function diffAvailable(
+  state: State,
+  scope: string,
+  availableNow: string[],
+): { newly: string[]; gone: string[] } {
+  const prevList = state.available[scope] ?? [];
+  const prev = new Set(prevList);
+  const nowSet = new Set(availableNow);
   const newly = availableNow.filter((d) => !prev.has(d));
+  const gone = prevList.filter((d) => !nowSet.has(d));
   state.available[scope] = availableNow;
-  return newly;
+  return { newly, gone };
 }
 
 /** Candado para evitar corridas solapadas (ej. cron cada minuto y una corrida lenta). */

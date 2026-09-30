@@ -1,7 +1,8 @@
 import { fetchAvailableDays, fetchTimeSlots, toDateKey } from "./dekra.js";
 import { getTargetDates, getNotifyChannels, isVercel, type DekraLocation, type NotifyChannel, type NotifyMode } from "./config.js";
 import { loadControl, resolveLocations, type Control } from "./control.js";
-import { loadState, saveState, takeNewlyAvailable, acquireLock, releaseLock, dedupBackend, type State } from "./dedup.js";
+import { loadState, saveState, diffAvailable, acquireLock, releaseLock, dedupBackend, type State } from "./dedup.js";
+import { recordEvents, type SlotEvent } from "./events.js";
 import type { LocationNotification, DateSlots } from "./email.js";
 import { notify } from "./notify.js";
 import { trackFailures, maybeHeartbeat, checkExpiry, inQuietHours } from "./alerts.js";
@@ -225,6 +226,7 @@ export async function run(): Promise<RunResult> {
     // Deteccion por transicion sobre las fechas con cupos reales.
     const errors: string[] = [];
     const scannedNow = new Map<string, Set<string>>();
+    const events: SlotEvent[] = [];
     const results: LocationResult[] = locations.map((location, i) => {
       const r = scans[i];
       if (r.status === "rejected") {
@@ -242,7 +244,16 @@ export async function run(): Promise<RunResult> {
       }
       const scan = r.value;
       scannedNow.set(location.locationId, new Set(scan.trulyAvailable));
-      const newly = new Set(takeNewlyAvailable(state, location.locationId, scan.trulyAvailable));
+      const diff = diffAvailable(state, location.locationId, scan.trulyAvailable);
+      const newly = new Set(diff.newly);
+      // Historial: a que hora aparecen los cupos y cuando se ocupan.
+      const t = now.toISOString();
+      for (const d of diff.newly) {
+        events.push({ t, kind: "new", loc: location.name, locId: location.locationId, date: d, n: scan.slotsByDate.get(d)?.length ?? 0 });
+      }
+      for (const d of diff.gone) {
+        events.push({ t, kind: "gone", loc: location.name, locId: location.locationId, date: d, n: 0 });
+      }
       return {
         name: location.name,
         locationId: location.locationId,
@@ -265,6 +276,12 @@ export async function run(): Promise<RunResult> {
       .join("\n");
 
     await trackFailures(state, errors);
+
+    if (events.length > 0) {
+      await recordEvents(events).catch((err) =>
+        console.error("No se pudo guardar el historial:", err instanceof Error ? err.message : err),
+      );
+    }
 
     // Novedades de esta corrida (+ las que quedaron pendientes por silencio).
     let notifications: LocationNotification[] = results
